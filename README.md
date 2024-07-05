@@ -24,3 +24,8 @@ by Michael Szmuk and Behçet Açıkmeşe.
 
 - 2D rocket landing problem
 [Feed-forward input tested in a box2d physics simulation](https://gfycat.com/DaringPortlyBlacklab)
+
+v2.1
+To prevent empty spaces between obstacles, I segmented the track based on its length when adding obstacles.
+But it still have a problem:
+![v2.1_problem](~@output/Figure_2024-07-05 150407.png)

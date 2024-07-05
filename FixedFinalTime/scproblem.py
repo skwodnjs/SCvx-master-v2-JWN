@@ -56,7 +56,7 @@ class SCProblem:
         sc_objective = cvx.Minimize(
             self.par['weight_nu'] * cvx.norm(self.var['nu'], 1)
         )
-
+        
         objective = sc_objective if model_objective is None else sc_objective + model_objective
 
         self.prob = cvx.Problem(objective, constraints)

@@ -30,16 +30,16 @@ class Model:
 
     def __init__(self):
         
-        M=5
-        H=0.3
-        x = np.arange(0, M+1)/M
-        a = H*np.random.rand(M+1)
-        b = a + H*np.random.rand(M+1)+H
+        M = 7   # the number of point
+        H = 0.3 # horizontal border
+        x = np.arange(0, M+1) / M
+        a = H * np.random.rand(M + 1)
+        b = a + H * np.random.rand(M + 1) + H
 
         # sp1: lower bound of track, sp2: upper bound of track
         # border: 0.3
-        sp1 = CubicSpline(x, a)
-        sp2 = CubicSpline(x, b)
+        self.sp1 = CubicSpline(x, a)
+        self.sp2 = CubicSpline(x, b)
         
         self.x_init = np.array([0,(a[0]+b[0])/2,0])
         self.x_final = np.array([1,(a[M]+b[M])/2,0])
@@ -51,13 +51,13 @@ class Model:
         # add obstacles
         
         # radious of obstacles
-        ep = 0.03
-                
+        ep = 0.04
+        
         # interval using curve length
         x_intervals_1 = [x[0]]
         current_length = 0
-        for i in np.linspace(x[0], x[-1], 5000):
-            current_length += (lambda t: np.sqrt(1 + (sp1(t, 1))**2))(i) * (x[-1] - x[0]) / 5000
+        for i in np.linspace(x[0], x[-1], 10000):
+            current_length += (lambda t: np.sqrt(1 + (self.sp1(t, 1))**2))(i) * (x[-1] - x[0]) / 10000
             if current_length >= ep * 2:
                 x_intervals_1.append(i)
                 current_length = 0
@@ -65,15 +65,15 @@ class Model:
         
         x_intervals_2 = [x[0]]
         current_length = 0
-        for i in np.linspace(x[0], x[-1], 5000):
-            current_length += (lambda t: np.sqrt(1 + (sp2(t, 1))**2))(i) * (x[-1] - x[0]) / 5000
+        for i in np.linspace(x[0], x[-1], 10000):
+            current_length += (lambda t: np.sqrt(1 + (self.sp2(t, 1))**2))(i) * (x[-1] - x[0]) / 10000
             if current_length >= ep * 2:
                 x_intervals_2.append(i)
                 current_length = 0
         x_intervals_2.append(x[-1])
         
-        curve_1 = sp1(x_intervals_1)
-        curve_2 = sp2(x_intervals_2)
+        curve_1 = self.sp1(x_intervals_1)
+        curve_2 = self.sp2(x_intervals_2)
         
         plt.axis([-0.5, 2, 0, 2])
         plt.axis("equal")
@@ -82,14 +82,15 @@ class Model:
         for k in range(len(x_intervals_2)):
             plt.gca().add_artist(plt.Circle((x_intervals_2[k], curve_2[k]), radius=ep, color='#0CABA8'))
 
-        plt.plot(x_intervals_1, curve_1, '-', color='#015958')
-        plt.plot(x_intervals_2, curve_2, '-', color='#015958')
+        xnew = np.linspace(0, 1, 100)
+        plt.plot(xnew, self.sp1(xnew), '-', color='#015958')
+        plt.plot(xnew, self.sp2(xnew), '-', color='#015958')
 
         for k in range(len(x_intervals_1)):
-            self.obstacles.append([[x_intervals_1[k],curve_1[k]],ep])
+            self.obstacles.append([[x_intervals_1[k], curve_1[k]], ep])
         for k in range(len(x_intervals_2)):
-            self.obstacles.append([[x_intervals_2[k],curve_2[k]],ep])
-            
+            self.obstacles.append([[x_intervals_2[k], curve_2[k]], ep])
+        
         for _ in self.obstacles:
             self.s_prime.append(cvx.Variable((K, 1), nonneg=True))
 
@@ -148,10 +149,10 @@ class Model:
         """
         :return: Functions to calculate A, B and f given state x and input u
         """
-        f = sp.zeros(3, 1)
+        f = sp.zeros(3, 1)    # Matrix([[0], [0], [0]])
 
-        x = sp.Matrix(sp.symbols('x y theta', real=True))
-        u = sp.Matrix(sp.symbols('v w', real=True))
+        x = sp.Matrix(sp.symbols('x y theta', real=True))   # Matrix([[x], [y], [theta]])
+        u = sp.Matrix(sp.symbols('v w', real=True))         # Matrix([[v], [w]])
 
         f[0, 0] = u[0, 0] * sp.cos(x[2, 0])
         f[1, 0] = u[0, 0] * sp.sin(x[2, 0])
@@ -187,6 +188,7 @@ class Model:
         return X, U
 
     def get_objective(self, X_v, U_v, X_last_p, U_last_p):
+        # 가져와서 쓰지도 않을거면 왜가져옴?
         """
         Get model specific objective to be minimized.
 
@@ -203,6 +205,10 @@ class Model:
 
         objective = cvx.Minimize(1e5 * slack)
         # objective += cvx.Minimize(cvx.sum(cvx.square(U_v)))
+        
+        # Length of trajectory
+        for k in range(K-1):
+            objective += cvx.Minimize((X_v[0, k] - X_v[0, k + 1])**2 + (X_v[1, k] - X_v[1, k + 1])**2)
         return objective
 
     def get_constraints(self, X_v, U_v, X_last_p, U_last_p):

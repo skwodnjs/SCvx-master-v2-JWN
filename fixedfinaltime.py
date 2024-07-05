@@ -28,6 +28,11 @@ X = np.empty(shape=[m.n_x, K])
 U = np.empty(shape=[m.n_u, K])
 
 # INITIALIZATION--------------------------------------------------------------------------------------------------------
+"""
+X, U, sigma get their information from Model()
+sigma is 'fixed time'
+X, U are updated with multiple iteration
+"""
 sigma = m.t_f_guess
 X, U = m.initialize_trajectory(X, U)
 
@@ -40,6 +45,7 @@ problem = SCProblem(m, K)
 
 last_nonlinear_cost = None
 converged = False
+
 for it in range(iterations):
     t0_it = time()
     print('-' * 50)
@@ -141,6 +147,4 @@ if not converged:
 # save trajectory to file for visualization
 save_arrays('output/trajectory/', {'X': all_X, 'U': all_U, 'sigma': all_sigma})
 
-plt.plot(X[0,:], X[1,:], 'x', color='#023535')
-# plot trajectory
-#plot(all_X, all_U, all_sigma)
+plt.plot(m.x_redim(X.copy())[0,:], m.x_redim(X.copy())[1,:], 'x', color='#023535')
