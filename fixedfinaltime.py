@@ -6,15 +6,9 @@ from FixedFinalTime.discretization import FirstOrderHold
 from FixedFinalTime.scproblem import SCProblem
 from utils import format_line, save_arrays
 
-# from Models.diffdrive_2d import Model
-# from Models.diffdrive_2d_plot import plot
-from Models.rocket_landing_3d import Model
-from Models.rocket_landing_3d_plot import plot
-
 from Models.diffdrive_2d import Model
 
-import matplotlib.pyplot as plt 
-#from Models.diffdrive_2d_plot import plot
+import matplotlib.pyplot as plt
 
 """
 Python implementation of the Successive Convexification algorithm.
@@ -147,6 +141,6 @@ if not converged:
 # save trajectory to file for visualization
 save_arrays('output/trajectory/', {'X': all_X, 'U': all_U, 'sigma': all_sigma})
 
-plt.plot(X[0,:], X[1,:])
+plt.plot(X[0,:], X[1,:], 'x', color='#023535')
 # plot trajectory
 #plot(all_X, all_U, all_sigma)

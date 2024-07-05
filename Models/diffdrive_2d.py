@@ -34,44 +34,61 @@ class Model:
         H=0.3
         x = np.arange(0, M+1)/M
         a = H*np.random.rand(M+1)
-        b = a + H*np.random.rand(M+1)+H 
+        b = a + H*np.random.rand(M+1)+H
 
-        spl = CubicSpline(x, a)
+        # sp1: lower bound of track, sp2: upper bound of track
+        # border: 0.3
+        sp1 = CubicSpline(x, a)
         sp2 = CubicSpline(x, b)
-        
         
         self.x_init = np.array([0,(a[0]+b[0])/2,0])
         self.x_final = np.array([1,(a[M]+b[M])/2,0])
 
         self.r_scale = self.upper_bound - self.lower_bound
-
-        # cylindrical obstacles [(x,y),r]
-        #self.obstacles = [
-        #    [[5., 4.], 3.],
-        #    [[-5., -4.], 3.],
-        #    [[0., 0.], 2.],
-        #]
-        self.obstacles = []
-        N_c =10
-        xnew = np.linspace(0, 1, num=N_c+1)
-        curve_1 = spl(xnew)
-        curve_2 = sp2(xnew)
         
-        ep=0.05
+        self.obstacles = []
+        
+        # add obstacles
+        
+        # radious of obstacles
+        ep = 0.03
+                
+        # interval using curve length
+        x_intervals_1 = [x[0]]
+        current_length = 0
+        for i in np.linspace(x[0], x[-1], 5000):
+            current_length += (lambda t: np.sqrt(1 + (sp1(t, 1))**2))(i) * (x[-1] - x[0]) / 5000
+            if current_length >= ep * 2:
+                x_intervals_1.append(i)
+                current_length = 0
+        x_intervals_1.append(x[-1])
+        
+        x_intervals_2 = [x[0]]
+        current_length = 0
+        for i in np.linspace(x[0], x[-1], 5000):
+            current_length += (lambda t: np.sqrt(1 + (sp2(t, 1))**2))(i) * (x[-1] - x[0]) / 5000
+            if current_length >= ep * 2:
+                x_intervals_2.append(i)
+                current_length = 0
+        x_intervals_2.append(x[-1])
+        
+        curve_1 = sp1(x_intervals_1)
+        curve_2 = sp2(x_intervals_2)
+        
         plt.axis([-0.5, 2, 0, 2])
         plt.axis("equal")
-        for k in range(N_c+1):
-            plt.gca().add_artist(plt.Circle((k/N_c, curve_1[k]), radius=ep))
-            plt.gca().add_artist(plt.Circle((k/N_c, curve_2[k]), radius=ep))
+        for k in range(len(x_intervals_1)):
+            plt.gca().add_artist(plt.Circle((x_intervals_1[k], curve_1[k]), radius=ep, color='#0CABA8'))
+        for k in range(len(x_intervals_2)):
+            plt.gca().add_artist(plt.Circle((x_intervals_2[k], curve_2[k]), radius=ep, color='#0CABA8'))
 
-       # plt.plot(xnew, curve_1, 'o', label='data')
-       # plt.plot(xnew, curve_2, 'o', label='data')
+        plt.plot(x_intervals_1, curve_1, '-', color='#015958')
+        plt.plot(x_intervals_2, curve_2, '-', color='#015958')
 
-        
-         
-        for k in range(N_c+1):
-            self.obstacles.append([[xnew[k],curve_1[k]],ep])
-            self.obstacles.append([[xnew[k],curve_2[k]],ep]) 
+        for k in range(len(x_intervals_1)):
+            self.obstacles.append([[x_intervals_1[k],curve_1[k]],ep])
+        for k in range(len(x_intervals_2)):
+            self.obstacles.append([[x_intervals_2[k],curve_2[k]],ep])
             
         for _ in self.obstacles:
             self.s_prime.append(cvx.Variable((K, 1), nonneg=True))
