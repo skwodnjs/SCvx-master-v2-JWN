@@ -24,3 +24,12 @@ by Michael Szmuk and Behçet Açıkmeşe.
 
 - 2D rocket landing problem
 [Feed-forward input tested in a box2d physics simulation](https://gfycat.com/DaringPortlyBlacklab)
+
+v2.1 To prevent empty spaces between obstacles, I segmented the track based on its length when adding obstacles. But it still have a problem: 
+![v2.1_problem](~@output/Figure_2024-07-05_150407.png)
+
+v2.1.1 I want to minimize the length of trajectory, by adding the length in objectives.
+
+v2.2 To prevent such problem, X is initialized to the center of the track.
+
+v2.3 Add constrain about acceleration.

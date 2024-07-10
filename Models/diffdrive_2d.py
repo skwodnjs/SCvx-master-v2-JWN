@@ -1,10 +1,10 @@
-import numpy as np
 import cvxpy as cvx
+import matplotlib.pyplot as plt
+import numpy as np
 import sympy as sp
+from scipy.interpolate import CubicSpline
 
 from global_parameters import K
-import matplotlib.pyplot as plt 
-from scipy.interpolate import CubicSpline
 
 class Model:
     """
@@ -15,6 +15,10 @@ class Model:
 
     v_max = 1  # m/s
     w_max = np.pi / 6  # rad/s
+
+    acc_max = 0.12  # m/s^2
+    angle_acc_max = np.pi / 6  # rad/s^2
+
     upper_bound = 1.05  # m
     lower_bound = -0.02  # m
 
@@ -29,52 +33,52 @@ class Model:
     s_prime = []
 
     def __init__(self):
-        
-        M=5
-        H=0.3
-        x = np.arange(0, M+1)/M
-        a = H*np.random.rand(M+1)
-        b = a + H*np.random.rand(M+1)+H
+
+        M = 10
+        H = 0.3
+        x = np.arange(0, M + 1) / M
+        a = H * np.random.rand(M + 1)
+        b = a + H * np.random.rand(M + 1) + H
 
         # sp1: lower bound of track, sp2: upper bound of track
         # border: 0.3
         self.sp1 = CubicSpline(x, a)
         self.sp2 = CubicSpline(x, b)
-        
-        self.x_init = np.array([0,(a[0]+b[0])/2,0])
-        self.x_final = np.array([1,(a[M]+b[M])/2,0])
+
+        self.x_init = np.array([0, (a[0] + b[0]) / 2, 0])
+        self.x_final = np.array([1, (a[M] + b[M]) / 2, 0])
 
         self.r_scale = self.upper_bound - self.lower_bound
-        
+
         self.obstacles = []
-        
+
         # add obstacles
-        
+
         # radious of obstacles
         ep = 0.04
-        
+
         # interval using curve length
         x_intervals_1 = [x[0]]
         current_length = 0
         for i in np.linspace(x[0], x[-1], 10000):
-            current_length += (lambda t: np.sqrt(1 + (self.sp1(t, 1))**2))(i) * (x[-1] - x[0]) / 10000
+            current_length += (lambda t: np.sqrt(1 + (self.sp1(t, 1)) ** 2))(i) * (x[-1] - x[0]) / 10000
             if current_length >= ep * 2:
                 x_intervals_1.append(i)
                 current_length = 0
         x_intervals_1.append(x[-1])
-        
+
         x_intervals_2 = [x[0]]
         current_length = 0
         for i in np.linspace(x[0], x[-1], 10000):
-            current_length += (lambda t: np.sqrt(1 + (self.sp2(t, 1))**2))(i) * (x[-1] - x[0]) / 10000
+            current_length += (lambda t: np.sqrt(1 + (self.sp2(t, 1)) ** 2))(i) * (x[-1] - x[0]) / 10000
             if current_length >= ep * 2:
                 x_intervals_2.append(i)
                 current_length = 0
         x_intervals_2.append(x[-1])
-        
+
         curve_1 = self.sp1(x_intervals_1)
         curve_2 = self.sp2(x_intervals_2)
-        
+
         plt.axis([-0.5, 2, 0, 2])
         plt.axis("equal")
         for k in range(len(x_intervals_1)):
@@ -90,7 +94,7 @@ class Model:
             self.obstacles.append([[x_intervals_1[k], curve_1[k]], ep])
         for k in range(len(x_intervals_2)):
             self.obstacles.append([[x_intervals_2[k], curve_2[k]], ep])
-        
+
         for _ in self.obstacles:
             self.s_prime.append(cvx.Variable((K, 1), nonneg=True))
 
@@ -98,6 +102,7 @@ class Model:
         """ nondimensionalize all parameters and boundaries """
 
         self.v_max /= self.r_scale
+        self.acc_max /= self.r_scale
         self.upper_bound /= self.r_scale
         self.lower_bound /= self.r_scale
         self.robot_radius /= self.r_scale
@@ -123,6 +128,7 @@ class Model:
     def redimensionalize(self):
         """ redimensionalize all parameters """
         self.v_max *= self.r_scale
+        self.acc_max *= self.r_scale
         self.upper_bound *= self.r_scale
         self.lower_bound *= self.r_scale
         self.robot_radius *= self.r_scale
@@ -180,7 +186,7 @@ class Model:
 
         for k in range(K):
             x = k / (K - 1)
-            X[:, k] = np.array([x, (sp1(x) + sp2(x))/2 , 0])
+            X[:, k] = np.array([x, (sp1(x) + sp2(x)) / 2, 0])
 
         U[:, :] = 0
 
@@ -230,6 +236,13 @@ class Model:
             U_v[0, :] <= self.v_max,
             cvx.abs(U_v[1, :]) <= self.w_max,
         ]
+
+        dt = 1. / (K - 1) * self.t_f_guess
+        for k in range(K - 1):
+            constraints += [
+                (U_v[0, k + 1] - U_v[0, k]) / dt <= self.acc_max,
+                cvx.abs(U_v[1, k + 1] - U_v[1, k]) / dt <= self.angle_acc_max,
+            ]
 
         # State conditions:
         constraints += [

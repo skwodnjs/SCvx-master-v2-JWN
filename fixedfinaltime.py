@@ -141,4 +141,5 @@ if not converged:
 # save trajectory to file for visualization
 save_arrays('output/trajectory/', {'X': all_X, 'U': all_U, 'sigma': all_sigma})
 
-plt.plot(m.x_redim(X.copy())[0,:], m.x_redim(X.copy())[1,:], 'x', color='#023535')
+plt.plot(m.x_redim(X.copy())[0, :], m.x_redim(X.copy())[1, :], '-x', color='#023535')
+plt.show()
