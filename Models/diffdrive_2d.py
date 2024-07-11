@@ -86,9 +86,10 @@ class Model:
         for k in range(len(x_intervals_2)):
             plt.gca().add_artist(plt.Circle((x_intervals_2[k], curve_2[k]), radius=ep, color='#0CABA8'))
 
-        xnew = np.linspace(0, 1, 100)
+        xnew = np.linspace(0, 1, 300)
         plt.plot(xnew, self.sp1(xnew), '-', color='#015958')
         plt.plot(xnew, self.sp2(xnew), '-', color='#015958')
+        plt.plot(xnew, (self.sp1(xnew) + self.sp2(xnew))/2, '-', color='#dd5959')
 
         for k in range(len(x_intervals_1)):
             self.obstacles.append([[x_intervals_1[k], curve_1[k]], ep])
